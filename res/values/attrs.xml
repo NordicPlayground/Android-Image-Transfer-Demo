@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <attr name="enabled" format="boolean"/>
+    <attr name="text" format="string"/>
+    <attr name="textHeight" format="dimension"/>
+    <attr name="textOffsetLeft" format="dimension"/>
+    <attr name="textColor" format="color"/>
+    <attr name="backgroundDrawable" format="reference"/>
+
+
+    <declare-styleable name="CheckButton">
+        <attr name="text"/>
+        <attr name="textHeight"/>
+        <attr name="textColor"/>
+        <attr name="textChecked" format="string"/>
+        <attr name="textUnChecked" format="string"/>
+        <attr name="checked" format="boolean"/>
+        <attr name="enabled"/>
+        <attr name="backgroundDrawable"/>
+        <attr name="iconWidth" format="dimension"/>
+        <attr name="iconHeight" format="dimension"/>
+        <attr name="iconCenterY" format="float"/>
+        <attr name="iconCheckedDrawable" format="reference"/>
+        <attr name="iconUncheckedDrawable" format="reference"/>
+        <attr name="labelPosition" format="enum">
+            <enum name="left" value="0"/>
+            <enum name="right" value="1"/>
+        </attr>
+    </declare-styleable>
+
+    <declare-styleable name="RgbLedButton">
+        <attr name="text"/>
+        <attr name="textHeight"/>
+        <attr name="textOffsetLeft"/>
+        <attr name="textColor"/>
+        <attr name="enabled"/>
+        <attr name="backgroundDrawable"/>
+        <attr name="rgbicon_drawable" format="reference"/>
+        <attr name="rgbiconYPos" format="float"/>
+        <attr name="rgbselector_drawable" format = "reference"/>
+        <attr name="rbgselector_size" format="dimension"/>
+    </declare-styleable>
+
+    <declare-styleable name="IntensityLedButton">
+        <attr name="text"/>
+        <attr name="textHeight"/>
+        <attr name="textOffsetLeft"/>
+        <attr name="textColor"/>
+        <attr name="enabled"/>
+        <attr name="ledOn" format="boolean"/>
+        <attr name="ledIntensity" format="float"/>
+        <attr name="backgroundDrawable"/>
+        <attr name="intensitySelectorDrawable" format="reference"/>
+        <attr name="intensitySelectorWidth" format="float"/>
+        <attr name="buttonOnDrawable" format="reference"/>
+        <attr name="buttonOffDrawable" format="reference"/>
+    </declare-styleable>
+
+    <declare-styleable name="AccDisplay">
+        <attr name="text"/>
+        <attr name="textHeight"/>
+        <attr name="textOffsetLeft"/>
+        <attr name="textColor"/>
+        <attr name="enabled"/>
+        <attr name="graphPaddingLeft" format="dimension"/>
+        <attr name="graphPaddingRight" format="dimension"/>
+        <attr name="graphPaddingTopBottom" format="dimension"/>
+        <attr name="graphLineWidth" format="dimension"/>
+        <attr name="graphLineColor1" format="color"/>
+        <attr name="graphLineColor2" format="color"/>
+        <attr name="graphLineColor3" format="color"/>
+        <attr name="backgroundDrawable"/>
+        <attr name="graphBckDrawable" format = "reference"/>
+    </declare-styleable>
+</resources>
