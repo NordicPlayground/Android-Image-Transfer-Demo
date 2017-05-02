@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 
@@ -45,10 +46,12 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -69,10 +72,11 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public enum AppLogFontType {APP_NORMAL, APP_ERROR, PEER_NORMAL, PEER_ERROR};
     private String mLogMessage = "";
 
-    TextView mTextViewLog, mTextViewFileLabel, mTextViewPictureStatus;
-    Button mBtnTakePicture, mBtnStartStream, mBtnResolution;
+    TextView mTextViewLog, mTextViewFileLabel, mTextViewPictureStatus, mTextViewConInt, mTextViewMtu;
+    Button mBtnTakePicture, mBtnStartStream;
     ProgressBar mProgressBarFileStatus;
     ImageView mMainImage;
+    Spinner mSpinnerResolution, mSpinnerPhy;
 
     private int mState = UART_PROFILE_DISCONNECTED;
     private ImageTransferService mService = null;
@@ -85,11 +89,10 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     // File transfer variables
     private int mBytesTransfered = 0, mBytesTotal = 0;
     private byte []mDataBuffer;
-    private int mResolutionSetting = 1;
     private boolean mStreamActive = false;
 
     public enum AppRunMode {Disconnected, Connected, ConnectedDuringSingleTransfer, ConnectedDuringStream};
-    public enum BleCommand {NoCommand, StartSingleCapture, StartStreaming, StopStreaming, ChangeResolution};
+    public enum BleCommand {NoCommand, StartSingleCapture, StartStreaming, StopStreaming, ChangeResolution, ChangePhy, GetBleParams};
 
     Handler guiUpdateHandler = new Handler();
     Runnable guiUpdateRunnable = new Runnable(){
@@ -120,11 +123,15 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
         mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
         mTextViewPictureStatus = (TextView)findViewById(R.id.textViewImageStatus);
+        mTextViewConInt = (TextView)findViewById(R.id.textViewCI);
+        mTextViewMtu = (TextView)findViewById(R.id.textViewMTU);
         mProgressBarFileStatus = (ProgressBar)findViewById(R.id.progressBarFile);
         mBtnTakePicture = (Button)findViewById(R.id.buttonTakePicture);
         mBtnStartStream = (Button)findViewById(R.id.buttonStartStream);
-        mBtnResolution = (Button)findViewById(R.id.buttonResolution);
         mMainImage = (ImageView)findViewById(R.id.imageTransfered);
+        mSpinnerResolution = (Spinner)findViewById(R.id.spinnerResolution);
+        mSpinnerResolution.setSelection(1);
+        mSpinnerPhy = (Spinner)findViewById(R.id.spinnerPhy);
         service_init();
         for(int i = 0; i < 6; i++) mUartData[i] = 0;
 
@@ -183,19 +190,36 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
         });
 
-        mBtnResolution.setOnClickListener(new View.OnClickListener() {
+        mSpinnerResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onClick(View v) {
-                String []resolutionList = new String[]{"160x120", "320x240", "640x480", "800x600", "1024x768", "1600x1200"};
-                mResolutionSetting = (mResolutionSetting + 1) % 6;
-                mBtnResolution.setText(resolutionList[mResolutionSetting]);
-                if(mService != null){
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                if(mService != null && mService.isConnected()){
                     byte []cmdData = new byte[1];
-                    cmdData[0] = (byte)mResolutionSetting;
+                    cmdData[0] = (byte)position;
                     mService.sendCommand(BleCommand.ChangeResolution.ordinal(), cmdData);
                 }
             }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+            }
         });
+
+        mSpinnerPhy.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                if(mService != null && mService.isConnected()){
+                    byte []cmdData = new byte[1];
+                    cmdData[0] = (byte)position;
+                    mService.sendCommand(BleCommand.ChangePhy.ordinal(), cmdData);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+            }
+        });
+
         // Set initial UI state
         guiUpdateHandler.postDelayed(guiUpdateRunnable, 0);
 
@@ -220,15 +244,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         }
     };
 
-    private Handler mHandler = new Handler() {
-        @Override
-        
-        //Handler events that received from UART service 
-        public void handleMessage(Message msg) {
-  
-        }
-    };
-
     private void setGuiByAppMode(AppRunMode appMode)
     {
         switch(appMode)
@@ -236,34 +251,33 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             case Connected:
                 mBtnTakePicture.setEnabled(true);
                 mBtnStartStream.setEnabled(true);
-                mBtnResolution.setEnabled(true);
                 btnConnectDisconnect.setText("Disconnect");
                 mBtnStartStream.setText("Start Stream");
+                mSpinnerResolution.setEnabled(true);
+                mSpinnerPhy.setEnabled(true);
                 break;
 
             case Disconnected:
                 mBtnTakePicture.setEnabled(false);
                 mBtnStartStream.setEnabled(false);
-                mBtnResolution.setEnabled(false);
                 btnConnectDisconnect.setText("Connect");
                 mBtnStartStream.setText("Start Stream");
                 mTextViewPictureStatus.setVisibility(View.INVISIBLE);
+                mSpinnerResolution.setEnabled(false);
+                mSpinnerPhy.setEnabled(false);
                 break;
 
             case ConnectedDuringSingleTransfer:
                 mBtnTakePicture.setEnabled(false);
                 mBtnStartStream.setEnabled(false);
-                mBtnResolution.setEnabled(false);
                 break;
 
             case ConnectedDuringStream:
-                mBtnTakePicture.setEnabled(true);
+                mBtnTakePicture.setEnabled(false);
                 mBtnStartStream.setEnabled(true);
-                mBtnResolution.setEnabled(true);
                 mBtnStartStream.setText("Stop Stream");
                 break;
         }
-
     }
 
     private void writeToLog(String message, AppLogFontType msgType){
@@ -302,7 +316,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 public void run() {
                     String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                     Log.d(TAG, "UART_CONNECT_MSG");
-                    setGuiByAppMode(AppRunMode.Connected);
+
                     writeToLog("Connected", AppLogFontType.APP_NORMAL);
                 }
             });
@@ -323,11 +337,13 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             });
         }
 
-      //*********************//
+        //*********************//
         if (action.equals(ImageTransferService.ACTION_GATT_SERVICES_DISCOVERED)) {
             mService.enableTXNotification();
-            //mRgbLedButton.setEnabled(true);
+            mService.sendCommand(BleCommand.GetBleParams.ordinal(), null);
+            setGuiByAppMode(AppRunMode.Connected);
         }
+
         //*********************//
         if (action.equals(ImageTransferService.ACTION_DATA_AVAILABLE)) {
 
@@ -348,7 +364,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         String elapsedSecondsString = df.format(elapsedSeconds);
                         String kbpsString = df.format((float)mDataBuffer.length / elapsedSeconds * 8.0f / 1000.0f);
                         //writeToLog("Completed in " + elapsedSecondsString + " seconds. " + kbpsString + " kbps", AppLogFontType.APP_NORMAL);
-                        mTextViewPictureStatus.setText(elapsedSecondsString + " seconds - " + kbpsString + " kbps");
+                        mTextViewPictureStatus.setText(String.valueOf(mDataBuffer.length / 1024) + "kB - " + elapsedSecondsString + " seconds - " + kbpsString + " kbps");
                         mTextViewPictureStatus.setVisibility(View.VISIBLE);
                         Bitmap bitmap;
                         Log.w(TAG, "attempting JPEG decode");
@@ -375,15 +391,35 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             runOnUiThread(new Runnable() {
                 public void run() {
                     try {
-                        // Start a new file transfer
-                        ByteBuffer byteBuffer = ByteBuffer.wrap(txValue);
-                        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-                        int fileSize = byteBuffer.getInt();
-                        mBytesTotal = fileSize;
-                        mDataBuffer = new byte[fileSize];
-                        mTextViewFileLabel.setText("Incoming file: " + String.valueOf(fileSize) + " bytes.");
-                        mBytesTransfered = 0;
-                        mStartTimeImageTransfer = System.currentTimeMillis();
+                        switch(txValue[0]) {
+                            case 1:
+                                // Start a new file transfer
+                                ByteBuffer byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(txValue, 1, 5));
+                                byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                                int fileSize = byteBuffer.getInt();
+                                mBytesTotal = fileSize;
+                                mDataBuffer = new byte[fileSize];
+                                mTextViewFileLabel.setText("Incoming file: " + String.valueOf(fileSize) + " bytes.");
+                                mBytesTransfered = 0;
+                                mStartTimeImageTransfer = System.currentTimeMillis();
+                                break;
+
+                            case 2:
+                                ByteBuffer mtuBB = ByteBuffer.wrap(Arrays.copyOfRange(txValue, 1, 3));
+                                mtuBB.order(ByteOrder.LITTLE_ENDIAN);
+                                short mtu = mtuBB.getShort();
+                                mTextViewMtu.setText(String.valueOf(mtu) + " bytes");
+                                ByteBuffer ciBB = ByteBuffer.wrap(Arrays.copyOfRange(txValue, 3, 5));
+                                ciBB.order(ByteOrder.LITTLE_ENDIAN);
+                                short conInterval = ciBB.getShort();
+                                mTextViewConInt.setText(String.valueOf((float)conInterval * 1.25f) + "ms");
+                                short txPhy = txValue[5];
+                                short rxPhy = txValue[6];
+                                writeToLog("Parameters updated.", AppLogFontType.APP_NORMAL);// ! MTU: " + String.valueOf(mtu) + ", " +
+                                            //"CI: " + String.valueOf((float)conInterval * 1.25f) + "ms, " +
+                                            //"PHY: " + String.valueOf(txPhy) + "/" + String.valueOf(rxPhy), AppLogFontType.APP_NORMAL);
+                                break;
+                        }
                     } catch (Exception e) {
                         Log.e(TAG, e.toString());
                     }
