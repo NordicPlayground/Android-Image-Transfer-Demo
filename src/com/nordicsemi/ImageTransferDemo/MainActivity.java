@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package com.nordicsemi.IntensityLightControl;
+package com.nordicsemi.ImageTransferDemo;
 
+import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.util.Date;
 
-
-import com.nordicsemi.IntensityLightControl.gui.IntensityLedButton;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -33,6 +35,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -42,15 +46,17 @@ import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity implements RadioGroup.OnCheckedChangeListener, IntensityLedButton.OnLedChangeListener {
+public class MainActivity extends Activity implements RadioGroup.OnCheckedChangeListener {
     private static final int REQUEST_SELECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     private static final int UART_PROFILE_READY = 10;
-    public static final String TAG = "lbs_tag";
+    public static final String TAG = "image_transfer_main";
     private static final int UART_PROFILE_CONNECTED = 20;
     private static final int UART_PROFILE_DISCONNECTED = 21;
     private static final int STATE_OFF = 10;
@@ -63,15 +69,37 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public enum AppLogFontType {APP_NORMAL, APP_ERROR, PEER_NORMAL, PEER_ERROR};
     private String mLogMessage = "";
 
-    TextView mRemoteRssiVal, mTextViewLog;
-    RadioGroup mRg;
+    TextView mTextViewLog, mTextViewFileLabel;
+    Button mBtnTakePicture, mBtnStartStream, mBtnResolution;
+    ProgressBar mProgressBarFileStatus;
+    ImageView mMainImage;
+
     private int mState = UART_PROFILE_DISCONNECTED;
-    private LedButtonService mService = null;
+    private ImageTransferService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
     private Button btnConnectDisconnect;
-    private IntensityLedButton btnLed;
     private byte []mUartData = new byte[6];
+    private long mStartTimeImageTransfer;
+
+    // File transfer variables
+    private int mBytesTransfered = 0, mBytesTotal = 0;
+    private byte []mDataBuffer;
+    private int mResolutionSetting = 1;
+
+    Handler guiUpdateHandler = new Handler();
+    Runnable guiUpdateRunnable = new Runnable(){
+        @Override
+        public void run(){
+            if(mTextViewFileLabel != null) {
+                mTextViewFileLabel.setText("Incoming: " + String.valueOf(mBytesTransfered) + "/" + String.valueOf(mBytesTotal));
+                if(mBytesTotal > 0) {
+                    mProgressBarFileStatus.setProgress(mBytesTransfered * 100 / mBytesTotal);
+                }
+            }
+            guiUpdateHandler.postDelayed(this, 50);
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -85,9 +113,13 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             return;
         }
         btnConnectDisconnect    = (Button) findViewById(R.id.btn_select);
-        btnLed = (IntensityLedButton) findViewById(R.id.ledbutton_led01);
-        btnLed.setLedChangedListener(this);
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
+        mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
+        mProgressBarFileStatus = (ProgressBar)findViewById(R.id.progressBarFile);
+        mBtnTakePicture = (Button)findViewById(R.id.buttonTakePicture);
+        mBtnStartStream = (Button)findViewById(R.id.buttonStartStream);
+        mBtnResolution = (Button)findViewById(R.id.buttonResolution);
+        mMainImage = (ImageView)findViewById(R.id.imageTransfered);
         service_init();
         for(int i = 0; i < 6; i++) mUartData[i] = 0;
 
@@ -115,32 +147,50 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 }
             }
         });
+
+        mBtnTakePicture.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mService != null){
+                    mService.sendCommand(1, null);
+                    mBtnTakePicture.setEnabled(false);
+                    mBtnStartStream.setEnabled(false);
+                    mBtnResolution.setEnabled(false);
+                }
+            }
+        });
+
+        mBtnStartStream.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mService != null){
+                    mService.sendCommand(2, null);
+                }
+            }
+        });
+
+        mBtnResolution.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String []resolutionList = new String[]{"160x120", "320x240", "640x480", "800x600", "1024x768", "1600x1200"};
+                mResolutionSetting = (mResolutionSetting + 1) % 6;
+                mBtnResolution.setText(resolutionList[mResolutionSetting]);
+                if(mService != null){
+                    byte []cmdData = new byte[1];
+                    cmdData[0] = (byte)mResolutionSetting;
+                    mService.sendCommand(3, cmdData);
+                }
+            }
+        });
         // Set initial UI state
-        //mRgbLedButton.setRgbChangedListener(this);
+        guiUpdateHandler.postDelayed(guiUpdateRunnable, 0);
     }
 
-
-    @Override
-    public void onIntensityChanged(IntensityLedButton sender, boolean ledOn, float ledIntensity) {
-        byte[] uartData = new byte[6];
-        writeToLog("Set intensity: " + String.valueOf(ledIntensity), AppLogFontType.APP_NORMAL);
-        if(mService.isConnected()){
-            String uartString;
-            int intensity = (int)(ledIntensity * 255.0f);
-            uartData[0] = (byte)(ledOn ? '1' : '0');
-            uartData[1] = (byte)'-';
-            uartData[2] = (byte)(intensity / 100 + '0');
-            uartData[3] = (byte)((intensity / 10) % 10 + '0');
-            uartData[4] = (byte)(intensity % 10 + '0');
-            uartData[5] = 0;
-            mService.writeRXCharacteristic(uartData);
-        }
-    }
 
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder rawBinder) {
-            mService = ((LedButtonService.LocalBinder) rawBinder).getService();
+            mService = ((ImageTransferService.LocalBinder) rawBinder).getService();
             Log.d(TAG, "onServiceConnected mService= " + mService);
             if (!mService.initialize()) {
                 Log.e(TAG, "Unable to initialize Bluetooth");
@@ -190,85 +240,128 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
     private final BroadcastReceiver UARTStatusChangeReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
+        String action = intent.getAction();
 
-            final Intent mIntent = intent;
-            //*********************//
-            if (action.equals(LedButtonService.ACTION_GATT_CONNECTED)) {
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
-                        Log.d(TAG, "UART_CONNECT_MSG");
-                        btnLed.setEnabled(true);
-                        btnConnectDisconnect.setText("Disconnect");
-                        writeToLog("Connected", AppLogFontType.APP_NORMAL);
-                    }
-                });
-            }
+        final Intent mIntent = intent;
+        //*********************//
+        if (action.equals(ImageTransferService.ACTION_GATT_CONNECTED)) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
+                    Log.d(TAG, "UART_CONNECT_MSG");
+                    mBtnTakePicture.setEnabled(true);
+                    mBtnStartStream.setEnabled(true);
+                    mBtnResolution.setEnabled(true);
+                    btnConnectDisconnect.setText("Disconnect");
+                    writeToLog("Connected", AppLogFontType.APP_NORMAL);
+                }
+            });
+        }
 
-              //*********************//
-            if (action.equals(LedButtonService.ACTION_GATT_DISCONNECTED)) {
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
-                        Log.d(TAG, "UART_DISCONNECT_MSG");
-                        btnConnectDisconnect.setText("Connect");
-                        btnLed.setEnabled(false);
-                        writeToLog("Disconnected", AppLogFontType.APP_NORMAL);
-                        mState = UART_PROFILE_DISCONNECTED;
-                        mUartData[0] = mUartData[1] = mUartData[2] = mUartData[3] = mUartData[4] = mUartData[5] = 0;
-                        mService.close();
+          //*********************//
+        if (action.equals(ImageTransferService.ACTION_GATT_DISCONNECTED)) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
+                    Log.d(TAG, "UART_DISCONNECT_MSG");
+                    btnConnectDisconnect.setText("Connect");
+                    writeToLog("Disconnected", AppLogFontType.APP_NORMAL);
+                    mState = UART_PROFILE_DISCONNECTED;
+                    mUartData[0] = mUartData[1] = mUartData[2] = mUartData[3] = mUartData[4] = mUartData[5] = 0;
+                    mService.close();
+                }
+            });
+        }
+
+      //*********************//
+        if (action.equals(ImageTransferService.ACTION_GATT_SERVICES_DISCOVERED)) {
+            mService.enableTXNotification();
+            //mRgbLedButton.setEnabled(true);
+        }
+        //*********************//
+        if (action.equals(ImageTransferService.ACTION_DATA_AVAILABLE)) {
+
+            final byte[] txValue = intent.getByteArrayExtra(ImageTransferService.EXTRA_DATA);
+            runOnUiThread(new Runnable() {
+            public void run() {
+                try {
+                    System.arraycopy(txValue, 0, mDataBuffer, mBytesTransfered, txValue.length);
+                    if(mBytesTransfered == 0){
+                        Log.w(TAG, "First packet received: " + String.valueOf(txValue.length) + " bytes");
                     }
-                });
+                    mBytesTransfered += txValue.length;
+                    if(mBytesTransfered >= mBytesTotal) {
+                        long elapsedTime = System.currentTimeMillis() - mStartTimeImageTransfer;
+                        float elapsedSeconds = (float)elapsedTime / 1000.0f;
+                        DecimalFormat df = new DecimalFormat("0.0");
+                        df.setMaximumFractionDigits(1);
+                        String elapsedSecondsString = df.format(elapsedSeconds);
+                        String kbpsString = df.format((float)mDataBuffer.length / elapsedSeconds * 8.0f / 1000.0f);
+                        writeToLog("Completed in " + elapsedSecondsString + " seconds. " + kbpsString + " kbps", AppLogFontType.APP_NORMAL);
+
+                        Bitmap bitmap;
+                        Log.w(TAG, "attempting JPEG decode");
+                        try {
+                            bitmap = BitmapFactory.decodeByteArray(mDataBuffer, 0, mDataBuffer.length);
+                            mMainImage.setImageBitmap(bitmap);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Bitmapfactory fail :(");
+                        }
+                        mBtnTakePicture.setEnabled(true);
+                        mBtnStartStream.setEnabled(true);
+                        mBtnResolution.setEnabled(true);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, e.toString());
+                }
             }
-          
-          //*********************//
-            if (action.equals(LedButtonService.ACTION_GATT_SERVICES_DISCOVERED)) {
-                mService.enableTXNotification();
-                //mRgbLedButton.setEnabled(true);
-            }
-          //*********************//
-            if (action.equals(LedButtonService.ACTION_DATA_AVAILABLE)) {
-              
-                 final byte[] txValue = intent.getByteArrayExtra(LedButtonService.EXTRA_DATA);
-                 runOnUiThread(new Runnable() {
-                     public void run() {
-                         try {
-                             String text = new String(txValue, "UTF-8");
-                             if(text.charAt(0) == '!'){
-                                 writeToLog(text.substring(1, text.length()), AppLogFontType.PEER_ERROR);
-                             }
-                             else {
-                                 writeToLog(text, AppLogFontType.PEER_NORMAL);
-                             }
-                         } catch (Exception e) {
-                             Log.e(TAG, e.toString());
-                         }
-                     }
-                 });
-             }
-           //*********************//
-            if (action.equals(LedButtonService.DEVICE_DOES_NOT_SUPPORT_LEDBUTTON)){
-            	//showMessage("Device doesn't support UART. Disconnecting");
-                writeToLog("APP: Invalid BLE service, disconnecting!",  AppLogFontType.APP_ERROR);
-            	mService.disconnect();
-            }
+            });
+        }
+        //*********************//
+        if (action.equals(ImageTransferService.ACTION_IMG_INFO_AVAILABLE)) {
+
+            final byte[] txValue = intent.getByteArrayExtra(ImageTransferService.EXTRA_DATA);
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        // Start a new file transfer
+                        ByteBuffer byteBuffer = ByteBuffer.wrap(txValue);
+                        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                        int fileSize = byteBuffer.getInt();
+                        mBytesTotal = fileSize;
+                        mDataBuffer = new byte[fileSize];
+                        mTextViewFileLabel.setText("Incoming file: " + String.valueOf(fileSize) + " bytes.");
+                        mBytesTransfered = 0;
+                        mStartTimeImageTransfer = System.currentTimeMillis();
+                    } catch (Exception e) {
+                        Log.e(TAG, e.toString());
+                    }
+                }
+            });
+        }
+        //*********************//
+        if (action.equals(ImageTransferService.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER)){
+            //showMessage("Device doesn't support UART. Disconnecting");
+            writeToLog("APP: Invalid BLE service, disconnecting!",  AppLogFontType.APP_ERROR);
+            mService.disconnect();
+        }
         }
     };
 
     private void service_init() {
-        Intent bindIntent = new Intent(this, LedButtonService.class);
+        Intent bindIntent = new Intent(this, ImageTransferService.class);
         bindService(bindIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
   
         LocalBroadcastManager.getInstance(this).registerReceiver(UARTStatusChangeReceiver, makeGattUpdateIntentFilter());
     }
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(LedButtonService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(LedButtonService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(LedButtonService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(LedButtonService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(LedButtonService.DEVICE_DOES_NOT_SUPPORT_LEDBUTTON);
+        intentFilter.addAction(ImageTransferService.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(ImageTransferService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(ImageTransferService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(ImageTransferService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(ImageTransferService.ACTION_IMG_INFO_AVAILABLE);
+        intentFilter.addAction(ImageTransferService.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
         return intentFilter;
     }
     @Override

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:custom="http://schemas.android.com/apk/res/com.nordicsemi.IntensityLightControl"
+    xmlns:custom="http://schemas.android.com/apk/res/com.nordicsemi.ImageTransferDemo"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical"
@@ -29,37 +29,56 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="0.31"
-        android:orientation="vertical" >
-        <RelativeLayout
-            android:id="@+id/RelativeLayout1"
-            android:layout_width="wrap_content"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/textViewFileLabel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:layout_marginTop="10dp"
-            android:layout_gravity="center"
-            android:orientation="vertical" >
+            android:paddingLeft="10dp"
+            android:text="Incoming file:" />
 
-        <com.nordicsemi.IntensityLightControl.gui.IntensityLedButton
-            android:id="@+id/ledbutton_led01"
-            android:layout_width="280dp"
-            android:layout_height="280dp"
-            android:padding="0dp"
-            custom:enabled="false"
-            custom:text="LED 01"
-            custom:textColor="#FF444444"
-            custom:textHeight="16dp"
-            custom:textOffsetLeft="13dp"
-            custom:backgroundDrawable="@drawable/intensitybtn_bck"
-            custom:buttonOnDrawable="@drawable/intensitybtn_led_on"
-            custom:buttonOffDrawable="@drawable/intensitybtn_led_off"
-            custom:intensitySelectorWidth="0.1"
-            custom:intensitySelectorDrawable= "@drawable/intensitybtn_selector"
-            />
+        <ProgressBar
+            android:id="@+id/progressBarFile"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"/>
 
-        </RelativeLayout>
+        <ImageView
+            android:id="@+id/imageTransfered"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="top"
+            android:padding="5dp"/>
 
+    </LinearLayout>
 
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp">
 
+        <Button
+            android:id="@+id/buttonTakePicture"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Take Picture" />
+
+        <Button
+            android:id="@+id/buttonStartStream"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Start Stream" />
+
+        <Button
+            android:id="@+id/buttonResolution"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="320x240" />
     </LinearLayout>
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

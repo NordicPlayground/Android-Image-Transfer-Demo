@@ -1,4 +1,4 @@
-package com.nordicsemi.IntensityLightControl.gui;
+package com.nordicsemi.ImageTransferDemo.gui;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -10,7 +10,7 @@ import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.View;
 
-import com.nordicsemi.IntensityLightControl.R;
+import com.nordicsemi.ImageTransferDemo.R;
 
 /**
  * Created by too1 on 02.10.2015.

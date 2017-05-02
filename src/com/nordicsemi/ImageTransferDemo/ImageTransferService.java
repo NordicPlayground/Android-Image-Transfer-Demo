@@ -1,4 +1,4 @@
-package com.nordicsemi.IntensityLightControl;
+package com.nordicsemi.ImageTransferDemo;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -24,8 +24,8 @@ import java.util.UUID;
  * Service for managing connection and data communication with a GATT server hosted on a
  * given Bluetooth LE device.
  */
-public class LedButtonService extends Service {
-    private final static String TAG = "lbs_tag_service";//LedButtonService.class.getSimpleName();
+public class ImageTransferService extends Service {
+    private final static String TAG = "lbs_tag_service";//ImageTransferService.class.getSimpleName();
 
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
@@ -38,17 +38,19 @@ public class LedButtonService extends Service {
     private static final int STATE_CONNECTED = 2;
 
     public final static String ACTION_GATT_CONNECTED =
-            "com.nordicsemi.IntensityLightControl.ACTION_GATT_CONNECTED";
+            "com.nordicsemi.ImageTransferDemo.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.nordicsemi.IntensityLightControl.ACTION_GATT_DISCONNECTED";
+            "com.nordicsemi.ImageTransferDemo.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.nordicsemi.IntensityLightControl.ACTION_GATT_SERVICES_DISCOVERED";
+            "com.nordicsemi.ImageTransferDemo.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.nordicsemi.IntensityLightControl.ACTION_DATA_AVAILABLE";
+            "com.nordicsemi.ImageTransferDemo.ACTION_DATA_AVAILABLE";
+    public final static String ACTION_IMG_INFO_AVAILABLE =
+            "com.nordicsemi.ImageTransferDemo.ACTION_IMG_INFO_AVAILABLE";
     public final static String EXTRA_DATA =
-            "com.nordicsemi.IntensityLightControl.EXTRA_DATA";
-    public final static String DEVICE_DOES_NOT_SUPPORT_LEDBUTTON =
-            "com.nordicsemi.IntensityLightControl.DEVICE_DOES_NOT_SUPPORT_LEDBUTTON";
+            "com.nordicsemi.ImageTransferDemo.EXTRA_DATA";
+    public final static String DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER =
+            "com.nordicsemi.ImageTransferDemo.DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER";
 
     public static final UUID TX_POWER_UUID = UUID.fromString("00001804-0000-1000-8000-00805f9b34fb");
     public static final UUID TX_POWER_LEVEL_UUID = UUID.fromString("00002a07-0000-1000-8000-00805f9b34fb");
@@ -56,9 +58,10 @@ public class LedButtonService extends Service {
     public static final UUID FIRMWARE_REVISON_UUID = UUID.fromString("00002a26-0000-1000-8000-00805f9b34fb");
     public static final UUID DIS_UUID = UUID.fromString("0000180a-0000-1000-8000-00805f9b34fb");
 
-    public static final UUID RX_SERVICE_UUID = UUID.fromString("626c0001-efcd-454e-b920-dd2e19450e90");
-    public static final UUID RX_CHAR_UUID = UUID.fromString("626c0002-efcd-454e-b920-dd2e19450e90");
-    public static final UUID TX_CHAR_UUID = UUID.fromString("626c0003-efcd-454e-b920-dd2e19450e90");
+    public static final UUID IMAGE_TRANSFER_SERVICE_UUID = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca3e");
+    public static final UUID RX_CHAR_UUID       = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca3e");
+    public static final UUID TX_CHAR_UUID       = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca3e");
+    public static final UUID IMG_INFO_CHAR_UUID = UUID.fromString("6e400004-b5a3-f393-e0a9-e50e24dcca3e");
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -108,7 +111,37 @@ public class LedButtonService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            if(IMG_INFO_CHAR_UUID.equals(characteristic.getUuid())) {
+                broadcastUpdate(ACTION_IMG_INFO_AVAILABLE, characteristic);
+            }
+            else {
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status){
+            Log.w(TAG, "OnCharWrite");
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            Log.w(TAG, "OnDescWrite!!!");
+            if(TX_CHAR_UUID.equals(descriptor.getCharacteristic().getUuid())) {
+                // When the first notification is set we can set the second
+                BluetoothGattService ImageTransferService = mBluetoothGatt.getService(IMAGE_TRANSFER_SERVICE_UUID);
+                BluetoothGattCharacteristic ImgInfoChar = ImageTransferService.getCharacteristic(IMG_INFO_CHAR_UUID);
+                if (ImgInfoChar == null) {
+                    showMessage("Img Info characteristic not found!");
+                    broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
+                    return;
+                }
+                mBluetoothGatt.setCharacteristicNotification(ImgInfoChar, true);
+
+                BluetoothGattDescriptor descriptor2 = ImgInfoChar.getDescriptor(CCCD);
+                descriptor2.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                mBluetoothGatt.writeDescriptor(descriptor2);
+            }
         }
     };
 
@@ -128,6 +161,8 @@ public class LedButtonService extends Service {
 
             // Log.d(TAG, String.format("Received TX: %d",characteristic.getValue() ));
             intent.putExtra(EXTRA_DATA, characteristic.getValue());
+        } else if(IMG_INFO_CHAR_UUID.equals(characteristic.getUuid())) {
+            intent.putExtra(EXTRA_DATA, characteristic.getValue());
         } else {
 
         }
@@ -135,8 +170,8 @@ public class LedButtonService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        LedButtonService getService() {
-            return LedButtonService.this;
+        ImageTransferService getService() {
+            return ImageTransferService.this;
         }
     }
 
@@ -303,45 +338,62 @@ public class LedButtonService extends Service {
      */
     public void enableTXNotification()
     {
-
-        BluetoothGattService RxService = mBluetoothGatt.getService(RX_SERVICE_UUID);
-        if (RxService == null) {
+        Log.w(TAG, "enable TX not.");
+        BluetoothGattService ImageTransferService = mBluetoothGatt.getService(IMAGE_TRANSFER_SERVICE_UUID);
+        if (ImageTransferService == null) {
             showMessage("Rx service not found!");
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_LEDBUTTON);
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
             return;
         }
-        BluetoothGattCharacteristic TxChar = RxService.getCharacteristic(TX_CHAR_UUID);
+
+        BluetoothGattCharacteristic TxChar = ImageTransferService.getCharacteristic(TX_CHAR_UUID);
         if (TxChar == null) {
-            showMessage("Tx charateristic not found!");
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_LEDBUTTON);
+            showMessage("Tx characteristic not found!");
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(TxChar,true);
+        mBluetoothGatt.setCharacteristicNotification(TxChar, true);
 
         BluetoothGattDescriptor descriptor = TxChar.getDescriptor(CCCD);
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         mBluetoothGatt.writeDescriptor(descriptor);
 
+
     }
 
     public void writeRXCharacteristic(byte[] value)
     {
-        BluetoothGattService RxService = mBluetoothGatt.getService(RX_SERVICE_UUID);
+        BluetoothGattService RxService = mBluetoothGatt.getService(IMAGE_TRANSFER_SERVICE_UUID);
         if (RxService == null) {
             showMessage("Rx service not found!");
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_LEDBUTTON);
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
             return;
         }
         BluetoothGattCharacteristic RxChar = RxService.getCharacteristic(RX_CHAR_UUID);
         if (RxChar == null) {
-            showMessage("Rx charateristic not found!");
-            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_LEDBUTTON);
+            showMessage("Rx characteristic not found!");
+            broadcastUpdate(DEVICE_DOES_NOT_SUPPORT_IMAGE_TRANSFER);
             return;
         }
         RxChar.setValue(value);
         boolean status = mBluetoothGatt.writeCharacteristic(RxChar);
 
         Log.d(TAG, "write TXchar - status=" + status);
+    }
+
+    public void sendCommand(int command, byte []data) {
+        byte []pckData;
+        if(data == null) {
+            pckData = new byte[1];
+            pckData[0] = (byte)command;
+        }
+        else {
+            pckData = new byte[1 + data.length];
+            pckData[0] = (byte)command;
+            for(int i = 0; i < data.length; i++) pckData[i + 1] = data[i];
+        }
+
+        writeRXCharacteristic(pckData);
     }
 
     private void showMessage(String msg) {

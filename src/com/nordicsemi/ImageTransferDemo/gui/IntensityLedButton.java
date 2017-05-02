@@ -1,4 +1,4 @@
-package com.nordicsemi.IntensityLightControl.gui;
+package com.nordicsemi.ImageTransferDemo.gui;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -13,7 +13,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.nordicsemi.IntensityLightControl.R;
+import com.nordicsemi.ImageTransferDemo.R;
 
 import java.util.Timer;
 import java.util.TimerTask;

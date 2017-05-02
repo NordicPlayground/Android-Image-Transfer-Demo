@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.nordicsemi.IntensityLightControl;
+package com.nordicsemi.ImageTransferDemo;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -202,7 +202,7 @@ public class DeviceListActivity extends Activity {
         boolean deviceFound = false;
 
         UUID serviceUUID = findServiceUuidInScanRecord(scanRecord);
-        if(serviceUUID != null && serviceUUID.equals(LedButtonService.RX_SERVICE_UUID)) {
+        if(serviceUUID != null && serviceUUID.equals(ImageTransferService.IMAGE_TRANSFER_SERVICE_UUID)) {
             for (BluetoothDevice listDev : deviceList) {
                 if (listDev.getAddress().equals(device.getAddress())) {
                     deviceFound = true;

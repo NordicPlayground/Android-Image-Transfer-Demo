@@ -16,7 +16,7 @@
 -->
 <resources>
 
-    <string name="app_name">BLE Light Control</string>
+    <string name="app_name">Image Transfer Demo</string>
     <string name="device">Device:</string>
     <string name="no_device">&lt;Select a device&gt;</string>
     <string name="select_device">Select a device</string>

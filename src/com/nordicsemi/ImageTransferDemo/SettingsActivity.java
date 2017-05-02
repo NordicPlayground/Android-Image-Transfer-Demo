@@ -1,4 +1,4 @@
-package com.nordicsemi.IntensityLightControl;
+package com.nordicsemi.ImageTransferDemo;
 
 
 import android.app.Activity;
