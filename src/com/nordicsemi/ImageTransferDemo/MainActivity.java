@@ -69,7 +69,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public enum AppLogFontType {APP_NORMAL, APP_ERROR, PEER_NORMAL, PEER_ERROR};
     private String mLogMessage = "";
 
-    TextView mTextViewLog, mTextViewFileLabel;
+    TextView mTextViewLog, mTextViewFileLabel, mTextViewPictureStatus;
     Button mBtnTakePicture, mBtnStartStream, mBtnResolution;
     ProgressBar mProgressBarFileStatus;
     ImageView mMainImage;
@@ -86,6 +86,10 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private int mBytesTransfered = 0, mBytesTotal = 0;
     private byte []mDataBuffer;
     private int mResolutionSetting = 1;
+    private boolean mStreamActive = false;
+
+    public enum AppRunMode {Disconnected, Connected, ConnectedDuringSingleTransfer, ConnectedDuringStream};
+    public enum BleCommand {NoCommand, StartSingleCapture, StartStreaming, StopStreaming, ChangeResolution};
 
     Handler guiUpdateHandler = new Handler();
     Runnable guiUpdateRunnable = new Runnable(){
@@ -115,6 +119,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         btnConnectDisconnect    = (Button) findViewById(R.id.btn_select);
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
         mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
+        mTextViewPictureStatus = (TextView)findViewById(R.id.textViewImageStatus);
         mProgressBarFileStatus = (ProgressBar)findViewById(R.id.progressBarFile);
         mBtnTakePicture = (Button)findViewById(R.id.buttonTakePicture);
         mBtnStartStream = (Button)findViewById(R.id.buttonStartStream);
@@ -152,10 +157,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             @Override
             public void onClick(View v) {
                 if(mService != null){
-                    mService.sendCommand(1, null);
-                    mBtnTakePicture.setEnabled(false);
-                    mBtnStartStream.setEnabled(false);
-                    mBtnResolution.setEnabled(false);
+                    mService.sendCommand(BleCommand.StartSingleCapture.ordinal(), null);
+                    setGuiByAppMode(AppRunMode.ConnectedDuringSingleTransfer);
                 }
             }
         });
@@ -164,7 +167,18 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             @Override
             public void onClick(View v) {
                 if(mService != null){
-                    mService.sendCommand(2, null);
+                    if(!mStreamActive) {
+                        mStreamActive = true;
+
+                        mService.sendCommand(BleCommand.StartStreaming.ordinal(), null);
+                        setGuiByAppMode(AppRunMode.ConnectedDuringStream);
+                    }
+                    else {
+                        mStreamActive = false;
+
+                        mService.sendCommand(BleCommand.StopStreaming.ordinal(), null);
+                        setGuiByAppMode(AppRunMode.Connected);
+                    }
                 }
             }
         });
@@ -178,12 +192,14 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 if(mService != null){
                     byte []cmdData = new byte[1];
                     cmdData[0] = (byte)mResolutionSetting;
-                    mService.sendCommand(3, cmdData);
+                    mService.sendCommand(BleCommand.ChangeResolution.ordinal(), cmdData);
                 }
             }
         });
         // Set initial UI state
         guiUpdateHandler.postDelayed(guiUpdateRunnable, 0);
+
+        setGuiByAppMode(AppRunMode.Disconnected);
     }
 
 
@@ -212,6 +228,43 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
   
         }
     };
+
+    private void setGuiByAppMode(AppRunMode appMode)
+    {
+        switch(appMode)
+        {
+            case Connected:
+                mBtnTakePicture.setEnabled(true);
+                mBtnStartStream.setEnabled(true);
+                mBtnResolution.setEnabled(true);
+                btnConnectDisconnect.setText("Disconnect");
+                mBtnStartStream.setText("Start Stream");
+                break;
+
+            case Disconnected:
+                mBtnTakePicture.setEnabled(false);
+                mBtnStartStream.setEnabled(false);
+                mBtnResolution.setEnabled(false);
+                btnConnectDisconnect.setText("Connect");
+                mBtnStartStream.setText("Start Stream");
+                mTextViewPictureStatus.setVisibility(View.INVISIBLE);
+                break;
+
+            case ConnectedDuringSingleTransfer:
+                mBtnTakePicture.setEnabled(false);
+                mBtnStartStream.setEnabled(false);
+                mBtnResolution.setEnabled(false);
+                break;
+
+            case ConnectedDuringStream:
+                mBtnTakePicture.setEnabled(true);
+                mBtnStartStream.setEnabled(true);
+                mBtnResolution.setEnabled(true);
+                mBtnStartStream.setText("Stop Stream");
+                break;
+        }
+
+    }
 
     private void writeToLog(String message, AppLogFontType msgType){
         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
@@ -249,10 +302,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 public void run() {
                     String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                     Log.d(TAG, "UART_CONNECT_MSG");
-                    mBtnTakePicture.setEnabled(true);
-                    mBtnStartStream.setEnabled(true);
-                    mBtnResolution.setEnabled(true);
-                    btnConnectDisconnect.setText("Disconnect");
+                    setGuiByAppMode(AppRunMode.Connected);
                     writeToLog("Connected", AppLogFontType.APP_NORMAL);
                 }
             });
@@ -264,7 +314,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 public void run() {
                     String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                     Log.d(TAG, "UART_DISCONNECT_MSG");
-                    btnConnectDisconnect.setText("Connect");
+                    setGuiByAppMode(AppRunMode.Disconnected);
                     writeToLog("Disconnected", AppLogFontType.APP_NORMAL);
                     mState = UART_PROFILE_DISCONNECTED;
                     mUartData[0] = mUartData[1] = mUartData[2] = mUartData[3] = mUartData[4] = mUartData[5] = 0;
@@ -297,8 +347,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         df.setMaximumFractionDigits(1);
                         String elapsedSecondsString = df.format(elapsedSeconds);
                         String kbpsString = df.format((float)mDataBuffer.length / elapsedSeconds * 8.0f / 1000.0f);
-                        writeToLog("Completed in " + elapsedSecondsString + " seconds. " + kbpsString + " kbps", AppLogFontType.APP_NORMAL);
-
+                        //writeToLog("Completed in " + elapsedSecondsString + " seconds. " + kbpsString + " kbps", AppLogFontType.APP_NORMAL);
+                        mTextViewPictureStatus.setText(elapsedSecondsString + " seconds - " + kbpsString + " kbps");
+                        mTextViewPictureStatus.setVisibility(View.VISIBLE);
                         Bitmap bitmap;
                         Log.w(TAG, "attempting JPEG decode");
                         try {
@@ -307,9 +358,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         } catch (Exception e) {
                             Log.w(TAG, "Bitmapfactory fail :(");
                         }
-                        mBtnTakePicture.setEnabled(true);
-                        mBtnStartStream.setEnabled(true);
-                        mBtnResolution.setEnabled(true);
+                        if(!mStreamActive) {
+                            setGuiByAppMode(AppRunMode.Connected);
+                        }
                     }
                 } catch (Exception e) {
                     Log.e(TAG, e.toString());

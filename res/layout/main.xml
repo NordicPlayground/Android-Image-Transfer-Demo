@@ -21,15 +21,40 @@
             android:padding="12dp"
             android:text="Connect" />
 
-
     </RelativeLayout>
 
-    <LinearLayout
+    <RelativeLayout
         android:id="@+id/linearLayout3"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="0.31"
+        android:layout_weight="1"
         android:orientation="vertical">
+
+
+        <ImageView
+            android:id="@+id/imageTransfered"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="top"
+            android:padding="5dp"/>
+
+        <TextView
+            android:id="@+id/textViewImageStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Last update 40kbsp"
+            android:gravity="center"
+            android:textColor="@color/whitegrey"
+            android:layout_alignParentBottom="true"
+            android:paddingBottom="10dp"/>
+
+    </RelativeLayout>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
         <TextView
             android:id="@+id/textViewFileLabel"
             android:layout_width="match_parent"
@@ -44,14 +69,6 @@
             android:layout_height="wrap_content"
             android:paddingLeft="5dp"
             android:paddingRight="5dp"/>
-
-        <ImageView
-            android:id="@+id/imageTransfered"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="top"
-            android:padding="5dp"/>
-
     </LinearLayout>
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -79,6 +96,83 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="320x240" />
+    </LinearLayout>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/textViewLblRes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:gravity="center"
+            android:text="Image Res" />
+
+        <TextView
+            android:id="@+id/textViewLblPhy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            android:gravity="center"
+            android:text="Phy" />
+
+        <TextView
+            android:id="@+id/textViewLblMtu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="MTU" />
+
+        <TextView
+            android:id="@+id/textViewLblCI"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Con. Int." />
+
+    </LinearLayout>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="horizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+
+
+        <Spinner
+            android:id="@+id/spinnerResolution"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/spinner_resolution"
+            android:layout_weight="0.8" />
+
+        <Spinner
+            android:id="@+id/spinnerPhy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            android:entries="@array/spinner_phy"/>
+
+        <TextView
+            android:id="@+id/textViewMTU"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="251 bytes" />
+
+        <TextView
+            android:id="@+id/textViewCI"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="50ms" />
+
     </LinearLayout>
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

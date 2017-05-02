@@ -66,4 +66,18 @@
     <string name="settings_text_pwm_min_base">PWM min value</string>
     <string name="settings_text_pwm_max_base">PWM max value</string>
 
+    <string-array name="spinner_resolution">
+        <item>160x120</item>
+        <item>320x240</item>
+        <item>640x480</item>
+        <item>800x600</item>
+        <item>1024x768</item>
+        <item>1600x1200</item>
+    </string-array>
+
+    <string-array name="spinner_phy">
+        <item>1MBps</item>
+        <item>2MBps</item>
+    </string-array>
+
 </resources>
