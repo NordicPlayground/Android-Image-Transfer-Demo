@@ -265,6 +265,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 mTextViewPictureStatus.setVisibility(View.INVISIBLE);
                 mSpinnerResolution.setEnabled(false);
                 mSpinnerPhy.setEnabled(false);
+                mSpinnerPhy.setSelection(0);
                 break;
 
             case ConnectedDuringSingleTransfer:
@@ -415,9 +416,13 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                                 mTextViewConInt.setText(String.valueOf((float)conInterval * 1.25f) + "ms");
                                 short txPhy = txValue[5];
                                 short rxPhy = txValue[6];
-                                writeToLog("Parameters updated.", AppLogFontType.APP_NORMAL);// ! MTU: " + String.valueOf(mtu) + ", " +
-                                            //"CI: " + String.valueOf((float)conInterval * 1.25f) + "ms, " +
-                                            //"PHY: " + String.valueOf(txPhy) + "/" + String.valueOf(rxPhy), AppLogFontType.APP_NORMAL);
+                                if(txPhy == 0x0001 && mSpinnerPhy.getSelectedItemPosition() == 1) {
+                                    mSpinnerPhy.setSelection(0);
+                                    writeToLog("2Mbps not supported!", AppLogFontType.APP_ERROR);
+                                }
+                                else {
+                                    writeToLog("Parameters updated.", AppLogFontType.APP_NORMAL);
+                                }
                                 break;
                         }
                     } catch (Exception e) {
