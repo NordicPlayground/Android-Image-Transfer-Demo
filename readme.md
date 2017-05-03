@@ -1,10 +1,14 @@
-# android-intensity-light-control
+# android-image-transfer-demo
 
-This app is based on the nRF Uart app, using a similar service with a randomized UUID, and allows the user to control the intensity and state of an LED on the connected device from the app. 
+This app allows images to be streamed from an nRF52 kit with a connected camera sensor to the application, showing the image and measuring the transfer speed in the process. 
 
-Rather than having to send string commands a custom GUI element is used to turn on/off the LED, and set the light intensity.  
+Different image resolutions can be selected in the app, and the BLE phy can be changed between 1Mbps and 2Mbps to demonstrate the difference (this requires a phone that supports 2Mbps). 
 
-This source code can be compiled with Android Studio and Gradle. 
+Tested on:   
+- Samsung Galaxy S8 
+	- Up to 1200kbps speed          
+- Samsung Galaxy S6 (1Mbps mode only)
+	- Up to 90kbps speed
 
 ### Note
 - Android 4.3 or later is required.
