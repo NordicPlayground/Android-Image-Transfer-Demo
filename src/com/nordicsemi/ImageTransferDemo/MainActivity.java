@@ -82,7 +82,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private ImageTransferService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect;
+    private Button btnConnectDisconnect, btnDebug;
     private byte []mUartData = new byte[6];
     private long mStartTimeImageTransfer;
 
@@ -120,6 +120,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             return;
         }
         btnConnectDisconnect    = (Button) findViewById(R.id.btn_select);
+        btnDebug = (Button)findViewById(R.id.btn_debug);
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
         mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
         mTextViewPictureStatus = (TextView)findViewById(R.id.textViewImageStatus);
@@ -157,6 +158,12 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         }
                     }
                 }
+            }
+        });
+        btnDebug.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mService.mtutest();
             }
         });
 

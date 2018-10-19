@@ -21,6 +21,14 @@
             android:padding="12dp"
             android:text="Connect" />
 
+        <Button
+            android:id="@+id/btn_debug"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btn_select"
+            android:padding="12dp"
+            android:text="MTU" />
+
     </RelativeLayout>
 
     <RelativeLayout

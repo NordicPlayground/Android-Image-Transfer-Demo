@@ -79,7 +79,6 @@ public class ImageTransferService extends Service {
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
-
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
@@ -94,8 +93,10 @@ public class ImageTransferService extends Service {
                 Log.w(TAG, "mBluetoothGatt = " + mBluetoothGatt );
 
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
+
             }
         }
 
@@ -142,6 +143,11 @@ public class ImageTransferService extends Service {
                 descriptor2.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                 mBluetoothGatt.writeDescriptor(descriptor2);
             }
+        }
+
+        @Override
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            Log.w(TAG, "MTU changed: " + String.valueOf(mtu));
         }
     };
 
@@ -276,6 +282,12 @@ public class ImageTransferService extends Service {
         }
         mBluetoothGatt.disconnect();
         // mBluetoothGatt.close();
+    }
+
+    public void mtutest(){
+        Log.i(TAG, "Requesting 247 byte MTU");
+
+        mBluetoothGatt.requestMtu(247);
     }
 
     /**
