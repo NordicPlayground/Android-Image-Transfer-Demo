@@ -82,7 +82,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private ImageTransferService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect, btnDebug;
+    private Button btnConnectDisconnect;
+    private boolean mMtuRequested;
     private byte []mUartData = new byte[6];
     private long mStartTimeImageTransfer;
 
@@ -120,7 +121,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             return;
         }
         btnConnectDisconnect    = (Button) findViewById(R.id.btn_select);
-        btnDebug = (Button)findViewById(R.id.btn_debug);
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
         mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
         mTextViewPictureStatus = (TextView)findViewById(R.id.textViewImageStatus);
@@ -158,12 +158,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         }
                     }
                 }
-            }
-        });
-        btnDebug.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mService.mtutest();
             }
         });
 
@@ -322,9 +316,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         if (action.equals(ImageTransferService.ACTION_GATT_CONNECTED)) {
             runOnUiThread(new Runnable() {
                 public void run() {
+                    mMtuRequested = false;
                     String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                     Log.d(TAG, "UART_CONNECT_MSG");
-
                     writeToLog("Connected", AppLogFontType.APP_NORMAL);
                 }
             });
@@ -394,7 +388,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         }
         //*********************//
         if (action.equals(ImageTransferService.ACTION_IMG_INFO_AVAILABLE)) {
-
             final byte[] txValue = intent.getByteArrayExtra(ImageTransferService.EXTRA_DATA);
             runOnUiThread(new Runnable() {
                 public void run() {
@@ -417,6 +410,11 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                                 mtuBB.order(ByteOrder.LITTLE_ENDIAN);
                                 short mtu = mtuBB.getShort();
                                 mTextViewMtu.setText(String.valueOf(mtu) + " bytes");
+                                if(!mMtuRequested && mtu < 64){
+                                    mService.requestMtu(247);
+                                    writeToLog("Requesting 247 byte MTU from app", AppLogFontType.APP_NORMAL);
+                                    mMtuRequested = true;
+                                }
                                 ByteBuffer ciBB = ByteBuffer.wrap(Arrays.copyOfRange(txValue, 3, 5));
                                 ciBB.order(ByteOrder.LITTLE_ENDIAN);
                                 short conInterval = ciBB.getShort();

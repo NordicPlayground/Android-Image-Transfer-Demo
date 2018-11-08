@@ -284,10 +284,10 @@ public class ImageTransferService extends Service {
         // mBluetoothGatt.close();
     }
 
-    public void mtutest(){
+    public void requestMtu(int mtu){
         Log.i(TAG, "Requesting 247 byte MTU");
 
-        mBluetoothGatt.requestMtu(247);
+        mBluetoothGatt.requestMtu(mtu);
     }
 
     /**
