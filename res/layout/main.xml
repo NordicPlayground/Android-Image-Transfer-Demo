@@ -39,6 +39,16 @@
             android:padding="5dp"/>
 
         <TextView
+            android:id="@+id/textViewImageFpsStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="5 FPS"
+            android:gravity="center"
+            style="@style/ImageOverlayText"
+            android:layout_alignParentTop="true"
+            android:paddingTop="10dp"/>
+
+        <TextView
             android:id="@+id/textViewImageStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -26,6 +26,7 @@ import java.util.Date;
 
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 
@@ -72,11 +73,11 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public enum AppLogFontType {APP_NORMAL, APP_ERROR, PEER_NORMAL, PEER_ERROR};
     private String mLogMessage = "";
 
-    TextView mTextViewLog, mTextViewFileLabel, mTextViewPictureStatus, mTextViewConInt, mTextViewMtu;
-    Button mBtnTakePicture, mBtnStartStream;
-    ProgressBar mProgressBarFileStatus;
-    ImageView mMainImage;
-    Spinner mSpinnerResolution, mSpinnerPhy;
+    private TextView mTextViewLog, mTextViewFileLabel, mTextViewPictureStatus, mTextViewPictureFpsStatus, mTextViewConInt, mTextViewMtu;
+    private Button mBtnTakePicture, mBtnStartStream;
+    private ProgressBar mProgressBarFileStatus;
+    private ImageView mMainImage;
+    private Spinner mSpinnerResolution, mSpinnerPhy;
 
     private int mState = UART_PROFILE_DISCONNECTED;
     private ImageTransferService mService = null;
@@ -91,6 +92,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private int mBytesTransfered = 0, mBytesTotal = 0;
     private byte []mDataBuffer;
     private boolean mStreamActive = false;
+
+    private ProgressDialog mConnectionProgDialog;
 
     public enum AppRunMode {Disconnected, Connected, ConnectedDuringSingleTransfer, ConnectedDuringStream};
     public enum BleCommand {NoCommand, StartSingleCapture, StartStreaming, StopStreaming, ChangeResolution, ChangePhy, GetBleParams};
@@ -124,6 +127,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         mTextViewLog = (TextView)findViewById(R.id.textViewLog);
         mTextViewFileLabel = (TextView)findViewById(R.id.textViewFileLabel);
         mTextViewPictureStatus = (TextView)findViewById(R.id.textViewImageStatus);
+        mTextViewPictureFpsStatus = (TextView)findViewById(R.id.textViewImageFpsStatus);
         mTextViewConInt = (TextView)findViewById(R.id.textViewCI);
         mTextViewMtu = (TextView)findViewById(R.id.textViewMTU);
         mProgressBarFileStatus = (ProgressBar)findViewById(R.id.progressBarFile);
@@ -133,6 +137,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         mSpinnerResolution = (Spinner)findViewById(R.id.spinnerResolution);
         mSpinnerResolution.setSelection(1);
         mSpinnerPhy = (Spinner)findViewById(R.id.spinnerPhy);
+        mConnectionProgDialog = new ProgressDialog(this);
+        mConnectionProgDialog.setTitle("Connecting...");
+        mConnectionProgDialog.setCancelable(false);
         service_init();
         for(int i = 0; i < 6; i++) mUartData[i] = 0;
 
@@ -264,7 +271,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 btnConnectDisconnect.setText("Connect");
                 mBtnStartStream.setText("Start Stream");
                 mTextViewPictureStatus.setVisibility(View.INVISIBLE);
+                mTextViewPictureFpsStatus.setVisibility(View.INVISIBLE);
                 mSpinnerResolution.setEnabled(false);
+                mSpinnerResolution.setSelection(1);
                 mSpinnerPhy.setEnabled(false);
                 mSpinnerPhy.setSelection(0);
                 break;
@@ -317,7 +326,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             runOnUiThread(new Runnable() {
                 public void run() {
                     mMtuRequested = false;
-                    String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
+                    mConnectionProgDialog.hide();
                     Log.d(TAG, "UART_CONNECT_MSG");
                     writeToLog("Connected", AppLogFontType.APP_NORMAL);
                 }
@@ -328,13 +337,15 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         if (action.equals(ImageTransferService.ACTION_GATT_DISCONNECTED)) {
             runOnUiThread(new Runnable() {
                 public void run() {
-                    String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
-                    Log.d(TAG, "UART_DISCONNECT_MSG");
                     setGuiByAppMode(AppRunMode.Disconnected);
-                    writeToLog("Disconnected", AppLogFontType.APP_NORMAL);
                     mState = UART_PROFILE_DISCONNECTED;
                     mUartData[0] = mUartData[1] = mUartData[2] = mUartData[3] = mUartData[4] = mUartData[5] = 0;
                     mService.close();
+                    mTextViewMtu.setText("-");
+                    mTextViewConInt.setText("-");
+                    mConnectionProgDialog.hide();
+                    Log.d(TAG, "UART_DISCONNECT_MSG");
+                    writeToLog("Disconnected", AppLogFontType.APP_NORMAL);
                 }
             });
         }
@@ -368,6 +379,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         //writeToLog("Completed in " + elapsedSecondsString + " seconds. " + kbpsString + " kbps", AppLogFontType.APP_NORMAL);
                         mTextViewPictureStatus.setText(String.valueOf(mDataBuffer.length / 1024) + "kB - " + elapsedSecondsString + " seconds - " + kbpsString + " kbps");
                         mTextViewPictureStatus.setVisibility(View.VISIBLE);
+                        mTextViewPictureFpsStatus.setText(df.format(1.0f / elapsedSeconds)  + " FPS");
+                        mTextViewPictureFpsStatus.setVisibility(View.VISIBLE);
                         Bitmap bitmap;
                         Log.w(TAG, "attempting JPEG decode");
                         try {
@@ -529,6 +542,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
                     //((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - connecting");
                     mService.connect(deviceAddress);
+
+                    mConnectionProgDialog.show();
                 }
                 break;
 
