@@ -384,8 +384,20 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         Bitmap bitmap;
                         Log.w(TAG, "attempting JPEG decode");
                         try {
-                            bitmap = BitmapFactory.decodeByteArray(mDataBuffer, 0, mDataBuffer.length);
-                            mMainImage.setImageBitmap(bitmap);
+                            byte[] jpgHeader = new byte[]{-1, -40, -1, -32};
+                            if(Arrays.equals(jpgHeader, Arrays.copyOfRange(mDataBuffer, 0, 4))) {
+                                // New plus version of the Arducam mini 2MP module
+                                bitmap = BitmapFactory.decodeByteArray(mDataBuffer, 0, mDataBuffer.length);
+                                mMainImage.setImageBitmap(bitmap);
+                            }
+                            else if(Arrays.equals(jpgHeader, Arrays.copyOfRange(mDataBuffer, 1, 5))){
+                                // Old version of the Arducam mini 2MP module
+                                bitmap = BitmapFactory.decodeByteArray(mDataBuffer, 1, mDataBuffer.length-1);
+                                mMainImage.setImageBitmap(bitmap);
+                            }
+                            else {
+                                Log.w(TAG, "JPG header missing!! Image data corrupt.");
+                            }
                         } catch (Exception e) {
                             Log.w(TAG, "Bitmapfactory fail :(");
                         }
