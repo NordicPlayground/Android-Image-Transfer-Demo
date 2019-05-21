@@ -12,6 +12,7 @@ Different image resolutions can be selected in the app, and the BLE phy can be c
 | Samsung Galaxy S8 | ~1200kbps | Yes |
 | Samsung Galaxy S6 | ~90kbps | No |
 | Nexus 5X | ~540kbps | No |
+| Nexus 5 | ~42kbps | No |
 | Huawei P20 Pro | ~460kbps | Poor (only 1 packet per con int in 2M mode, leading to worse throughput) |
 | Lenovo Tab 4 10 Wifi | ~57kbps | No |
 
