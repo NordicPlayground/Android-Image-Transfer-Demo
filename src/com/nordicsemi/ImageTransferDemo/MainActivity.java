@@ -452,7 +452,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                                     writeToLog("2Mbps not supported!", AppLogFontType.APP_ERROR);
                                 }
                                 else {
-                                    writeToLog("Parameters updated.", AppLogFontType.APP_NORMAL);
+                                    writeToLog("Param update - CI: " + String.valueOf((float)conInterval * 1.25f) + "ms" +
+                                                ",MTU: " + String.valueOf(mtu) + ",PHY: " + String.valueOf(txPhy) + "/" + String.valueOf(rxPhy),
+                                                AppLogFontType.APP_NORMAL);
                                 }
                                 break;
                         }
