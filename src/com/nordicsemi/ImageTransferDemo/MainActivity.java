@@ -93,6 +93,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private byte []mDataBuffer;
     private boolean mStreamActive = false;
 
+    final byte positionToResolutionMap[] = {10,1,2,4,9};
+    final byte resolutionToPositionMap[] = {-1,1,2,-1,3,-1,-1,-1,4,4,0};
+
     private ProgressDialog mConnectionProgDialog;
 
     public enum AppRunMode {Disconnected, Connected, ConnectedDuringSingleTransfer, ConnectedDuringStream};
@@ -203,7 +206,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
                 if(mService != null && mService.isConnected()){
-                    byte positionToResolutionMap[] = {10,1,2,4,9};
                     byte []cmdData = new byte[1];
                     cmdData[0] = positionToResolutionMap[position];
                     mService.sendCommand(BleCommand.ChangeResolution.ordinal(), cmdData);
@@ -457,6 +459,17 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                                                 ",MTU: " + String.valueOf(mtu) + ",PHY: " + String.valueOf(txPhy) + "/" + String.valueOf(rxPhy),
                                                 AppLogFontType.APP_NORMAL);
                                 }
+                                break;
+
+                            case 3:
+                                boolean camModel5MP = txValue[1] == 2;
+                                int resolutionIndex = (int)txValue[2];
+                                if (resolutionIndex <= 10) {
+                                    int resolutionListIndex = resolutionToPositionMap[resolutionIndex];
+                                    mSpinnerResolution.setSelection(resolutionListIndex);
+                                }
+                                writeToLog("Client update - Cam: " + (camModel5MP ? "5MP" : "3MP") + ", Res index: " + String.valueOf(resolutionIndex),
+                                            AppLogFontType.APP_NORMAL);
                                 break;
                         }
                     } catch (Exception e) {

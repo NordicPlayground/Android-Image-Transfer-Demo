@@ -73,6 +73,13 @@
         <item>1280x720</item>
         <item>Max (3MP or 5MP)</item>
     </string-array>
+    <string-array name="spinner_resolution_5mp">
+        <item>96x96</item>
+        <item>320x240</item>
+        <item>640x480</item>
+        <item>1280x720</item>
+        <item>2592x1944</item>
+    </string-array>
 
     <string-array name="spinner_phy">
         <item>1Mbps</item>
