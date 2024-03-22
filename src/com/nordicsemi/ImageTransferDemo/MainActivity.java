@@ -203,7 +203,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             @Override
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
                 if(mService != null && mService.isConnected()){
-                    byte positionToResolutionMap[] = {10,11,1,2,4,6,7};
+                    byte positionToResolutionMap[] = {10,1,2,4,9};
                     byte []cmdData = new byte[1];
                     cmdData[0] = positionToResolutionMap[position];
                     mService.sendCommand(BleCommand.ChangeResolution.ordinal(), cmdData);

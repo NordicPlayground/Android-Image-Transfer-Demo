@@ -68,12 +68,10 @@
 
     <string-array name="spinner_resolution">
         <item>96x96</item>
-        <item>128x128</item>
         <item>320x240</item>
         <item>640x480</item>
         <item>1280x720</item>
-        <item>1600x1200</item>
-        <item>1920x1080</item>
+        <item>Max (3MP or 5MP)</item>
     </string-array>
 
     <string-array name="spinner_phy">
