@@ -160,6 +160,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         startActivityForResult(newIntent, REQUEST_SELECT_DEVICE);
                     } else {
                         //Disconnect button pressed
+                        mStreamActive = false;
                         if (mDevice != null) {
                             mService.disconnect();
                         }
